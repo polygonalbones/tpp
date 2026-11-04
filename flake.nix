@@ -1,7 +1,14 @@
 {
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-  outputs = inputs@{ self, nixpkgs }:
+    zig-flake = {
+      url = "github:silversquirl/zig-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = inputs@{ self, nixpkgs, zig-flake }:
     let
       systems = [
         "x86_64-linux"
@@ -19,11 +26,12 @@
                 ;
 
               system = stdenv.hostPlatform.system;
+
+              zig = zig-flake.packages.${system}.zig_0_17_1;
             in {
-              devShells.${system}.default = mkShell.override { stdenv = pkgs.clangStdenv; } {
+              devShells.${system}.default = mkShell {
                 packages = with pkgs; [
-                  tinycc
-                  valgrind
+                  zig
                 ];
               };
             })
