@@ -4,6 +4,7 @@ const Compilation = @import("Compilation.zig");
 const Options = @import("Options.zig");
 
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
+var threaded_io = std.Io.Threaded.init_single_threaded;
 
 // compiler state
 var source_files: std.ArrayList([]const u8) = .empty;
@@ -33,10 +34,11 @@ pub fn main(init: std.process.Init.Minimal) !void {
         }
     }
 
-    const unit: Compilation = .{
+    const comp: Compilation = .{
         .gpa = gpa,
+        .io = threaded_io.io(),
         .source_files = source_files.items,
         .options = options,
     };
-    try unit.compile();
+    try comp.compile();
 }
