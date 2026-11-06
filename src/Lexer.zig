@@ -5,7 +5,10 @@ const Lexer = @This();
 source: []const u8,
 
 const Token = struct {
-    pos: usize,
+    kind: enum {
+        unknown,
+        eof,
+    },
     value: []const u8,
 };
 
