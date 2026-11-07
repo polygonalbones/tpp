@@ -4,7 +4,7 @@ tpp (tiny plus-plus) is a tiny compiler designed to compile C++ correctly, as fa
 ## Goals and Non-Goals
 tpp **is** a compiler written for fun. I do not use AI tools in this project specifically because I want to learn and have fun with it.
 
-tpp **is** is aiming for C++11 as a baseline.
+tpp **is** aiming for C++11 as a baseline.
 
 tpp **is not** a production-grade optimizing compiler, and by extension, a GCC/Clang replacement.
 
