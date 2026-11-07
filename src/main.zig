@@ -10,7 +10,12 @@ var threaded_io = std.Io.Threaded.init_single_threaded;
 var source_files: std.ArrayList([]const u8) = .empty;
 var options: Options = .defaults;
 
-pub fn main(init: std.process.Init.Minimal) !void {
+pub fn main(init: std.process.Init.Minimal) u8 {
+    main2(init) catch return 1;
+    return 0;
+}
+
+fn main2(init: std.process.Init.Minimal) !void {
     const gpa, const is_debug = switch(builtin.mode) {
         .Debug, .ReleaseSafe => .{ debug_allocator.allocator(), true },
         .ReleaseFast, .ReleaseSmall => .{ std.heap.smp_allocator, false },
@@ -18,6 +23,12 @@ pub fn main(init: std.process.Init.Minimal) !void {
     defer if(is_debug) {
         _ = debug_allocator.deinit();
     };
+
+    const io = threaded_io.io();
+    
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_writer = std.Io.File.stdout().writerStreaming(io, &stdout_buffer);
+    const stdout = &stdout_writer.interface;
     
     var args_iter = try init.args.iterateAllocator(gpa);
     defer args_iter.deinit();
@@ -26,19 +37,73 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     _ = args_iter.next();
     while(args_iter.next()) |arg| {
+        if(arg.len == 0) return;
         if(arg[0] == '-') {
-            // TODO: -Wall, -Wextra, -D, -o
+            if(std.mem.eql(u8, arg, "--help")) {
+                _ = stdout.print("Usage: tpp <source_files> <arguments>\n", .{}) catch {};
+                _ = stdout.flush() catch {};
+                return;
+            }
+            else if(std.mem.eql(u8, arg, "-std")) {
+                if(args_iter.next()) |arg2| {
+                    if(std.meta.stringToEnum(Options.CppStandard, arg2)) |standard| {
+                        options.standard = standard;
+                    }
+                    else {
+                        _ = print_std_opt_error(stdout, arg2) catch {};
+                        return error.BadArgumentForOpt;
+                    }
+                }
+                else {
+                    _ = stdout.print("tpp: Unknown argument '{s}'\n", .{arg}) catch {};
+                    _ = stdout.flush() catch {};
+                    return error.UnknownArgument;
+                }
+            }
+            else if(std.mem.cutPrefix(u8, arg, "-std=")) |arg2| {
+                if(std.meta.stringToEnum(Options.CppStandard, arg2)) |standard| {
+                    options.standard = standard;
+                }
+                else {
+                    _ = print_std_opt_error(stdout, arg2) catch {};
+                    return error.BadArgumentForOpt;
+                }
+            }
+            else {
+                _ = stdout.print("tpp: Unknown argument '{s}'\n", .{arg}) catch {};
+                _ = stdout.flush() catch {};
+                return error.UnknownArgument;
+            }
         }
         else {
             try source_files.append(gpa, arg);
         }
     }
 
+    if(source_files.items.len == 0) {
+        _ = stdout.print("tpp: No source files provided\nRun with --help for usage.\n", .{}) catch {};
+        _ = stdout.flush() catch {};
+        return error.NoInputFiles;
+    }
+
     const comp: Compilation = .{
         .gpa = gpa,
-        .io = threaded_io.io(),
+        .io = io,
         .source_files = source_files.items,
         .options = options,
     };
     try comp.compile();
+}
+
+fn print_std_opt_error(stdout: *std.Io.Writer, arg: []const u8) !void {
+    const std_values = comptime blk: {
+        var str: []const u8 = "";
+        for(std.meta.fieldNames(Options.CppStandard), 0..) |f, i| {
+            if(i != 0) str = str ++ ", ";
+            str = str ++ f;
+        }
+        break :blk str;
+    };
+    _ = stdout.print("tpp: Invalid value for -std '{s}'.\nPossible values are: {s}\n", .{ arg, std_values }) catch {};
+    _ = stdout.flush() catch {};
 }
