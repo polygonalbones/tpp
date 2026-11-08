@@ -16,7 +16,9 @@ pub fn compile(self: *const Compilation, stdout: *std.Io.Writer) !void {
 
         blk: while(true) {
             const token = lexer.next();
-            _ = try stdout.print("token kind: {s} value: {s}\n", .{ @tagName(token.kind), lexer.source[token.span.start..token.span.end] });
+            if(self.options.dump == .tokens) {
+                _ = try stdout.print("{s} '{s}'\n", .{ @tagName(token.kind), lexer.source[token.span.start..token.span.end] });
+            }
             switch(token.kind) {
                 .eof => break :blk,
                 .unknown => {

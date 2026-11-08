@@ -58,13 +58,29 @@ pub fn fromFile(gpa: std.mem.Allocator, io: std.Io, path: []const u8) !Lexer {
     return .{ .source = buffer, .pos = 0 };
 }
 
-inline fn isNonDigit(char: u8) bool {
+fn isNonDigit(char: u8) bool {
     return std.ascii.isAlphabetic(char) or char == '_';
 }
 
-inline fn isNonZeroDigit(char: u8) bool {
+fn isNonZeroDigit(char: u8) bool {
     return switch(char) {
         '1'...'9' => true,
+        else => false,
+    };
+}
+
+fn isOctalDigit(char: u8) bool {
+    return switch(char) {
+        '0'...'7' => true,
+        else => false,
+    };
+}
+
+fn isHexadecimalDigit(char: u8) bool {
+    return switch(char) {
+        '0'...'9' => true,
+        'a'...'f' => true,
+        'A'...'F' => true,
         else => false,
     };
 }
@@ -87,10 +103,10 @@ pub fn next(self: *Lexer) Token {
         return token;
     }
 
-    // identifier:
-    //            identifier-nondigit
-    //            identifier identifier-nondigit
-    //            identifier digit
+    //  identifier:
+    //             identifier-nondigit
+    //             | identifier identifier-nondigit
+    //             | identifier digit
     if(isNonDigit(self.source[self.pos])) {
         token.kind = .identifier;
         self.pos += 1;
@@ -102,23 +118,44 @@ pub fn next(self: *Lexer) Token {
             token.kind = .keyword;
         }
     }
-    // literal:
-    //         integer-literal
-    //         character-literal
-    //         floating-literal
-    //         string-literal
-    //         boolean-literal
-    //         pointer-literal
-    //         user-defined-literal
+    //  integer-literal:
+    //                  decimal-literal integer-suffix?
+    //                  | octal-literal integer-suffix?
+    //                  | hexadecimal-literal integer-suffix?
     else if(std.ascii.isDigit(self.source[self.pos])) {
-        // decimal-literal:
-        //                 nonzero-digit
-        //                 decimal-literal digit
+        //  TODO: handle integer suffixes
+        
+        //  decimal-literal:
+        //                  nonzero-digit
+        //                  | decimal-literal digit
         if(isNonZeroDigit(self.source[self.pos])) {
             token.kind = .integer_literal;
             self.pos += 1;
             while(self.pos < self.source.len and (isNonZeroDigit(self.source[self.pos]) or std.ascii.isDigit(self.source[self.pos]))) {
                 self.pos += 1;
+            }
+            token.span.end = self.pos;
+        }
+        else if(self.source[self.pos] == '0') {
+            token.kind = .integer_literal;
+            self.pos += 1;
+            //  hexadecimal-literal:
+            //                      0x hexadecimal-digit
+            //                      | 0X hexadecimal-digit
+            //                      | hexadecimal-literal hexadecimal-digit       
+            if(self.pos < self.source.len and (self.source[self.pos] == 'x' or self.source[self.pos] == 'X')) {
+                self.pos += 1;
+                while(self.pos < self.source.len and isHexadecimalDigit(self.source[self.pos])) {
+                    self.pos += 1;
+                }
+            }
+            //  octal-literal:
+            //                0
+            //                | octal-literal octal-digit
+            else {
+                while(self.pos < self.source.len and isOctalDigit(self.source[self.pos])) {
+                    self.pos += 1;
+                }
             }
             token.span.end = self.pos;
         }

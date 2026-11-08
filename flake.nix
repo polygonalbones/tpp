@@ -32,6 +32,7 @@
               devShells.${system}.default = mkShell {
                 packages = with pkgs; [
                   zig
+                  clang
                 ];
               };
             })
