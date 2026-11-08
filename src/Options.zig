@@ -7,9 +7,7 @@ pub const CppStandard = enum {
 };
 
 standard: CppStandard,
-trigraphs: bool,
 
 pub const defaults: Options = .{
     .standard = .@"c++11",
-    .trigraphs = false,
 };

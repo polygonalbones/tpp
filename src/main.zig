@@ -64,9 +64,6 @@ pub fn main(init: std.process.Init.Minimal) u8 {
                     return 1;
                 }
             }
-            else if(std.mem.eql(u8, arg, "-trigraphs")) {
-                options.trigraphs = true;
-            }
             else {
                 _ = stdout.print("tpp: Unknown argument '{s}'\n", .{arg}) catch {};
                 _ = stdout.flush() catch {};
