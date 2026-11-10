@@ -11,7 +11,11 @@ tpp **is not** a production-grade optimizing compiler, and by extension, a GCC/C
 tpp **is not** going to work on every system. At the moment I test on a x86_64 NixOS box and a Hackintosh running macOS Sonoma.
 
 ## Building
-tpp itself does not have any external dependencies, so you just need to grab [Zig 0.17.1](https://ziglang.org/download/#release-0.17.1) and run `zig build` inside the directory after cloning it.
+tpp itself does not have any external dependencies outside of a libc and Make. To build it, clone the repository and run
+```
+make
+```
+This will output the file `build/tpp`.
 
 ## Supported systems
 I'll add a chart here later, but currently tpp is so early into development it does not compile stuff yet
