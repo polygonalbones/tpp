@@ -1,8 +1,0 @@
-.{
-    .name = .tpp,
-    .version = "0.1.0",
-    .fingerprint = 0xd38311549efc3199,
-    .minimum_zig_version = "0.17.1",
-    .dependencies = .{},
-    .paths = .{""},
-}

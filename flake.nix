@@ -1,14 +1,7 @@
 {
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    zig-flake = {
-      url = "github:silversquirl/zig-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
-
-  outputs = inputs@{ self, nixpkgs, zig-flake }:
+  outputs = inputs@{ self, nixpkgs }:
     let
       systems = [
         "x86_64-linux"
@@ -26,12 +19,10 @@
                 ;
 
               system = stdenv.hostPlatform.system;
-
-              zig = zig-flake.packages.${system}.zig_0_17_1;
             in {
               devShells.${system}.default = mkShell {
                 packages = with pkgs; [
-                  zig
+                  tinycc
                   clang
                 ];
               };
