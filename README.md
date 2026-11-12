@@ -20,7 +20,7 @@ tpp itself does not have any external dependencies outside of a C compiler (+ li
 
 This will output the file `build/tpp`.
 
-For Nix users on systems with flakes enabled, there is a devShell present in the `flake.nix` file that contains `gcc`, `clang`, and `tinycc`, as I think it is important to test 
+For Nix users on systems with flakes enabled, there is a devShell present in the `flake.nix` file that contains `gcc`, `clang`, and `tinycc`, as I think it is important to different C compilers are able to compile tpp (especially tcc as being able to compile tpp and use it to bootstrap GCC/Clang is a goal for the far future).
 
 ## Supported systems
 These are systems that the compiler can build and be executed on, and can be cross-compiled to.
