@@ -24,8 +24,7 @@ For Nix users on systems with flakes enabled, there is a devShell present in the
 
 ## Supported systems
 These are systems that the compiler can build and be executed on, and can be cross-compiled to.
-- x86_64-linux
-  - This will always have the best support since it is the system I develop the compiler on.
+- `x86_64-linux` - This will always have the best support since it is the system I develop the compiler on.
 
 ## Contributions
 I am willing to accept contributions to the compiler. I don't feel like writing an AI policy so I simply ask that if you use AI like a tool (aka, you actually read the code and use your brain!) then I am perfectly willing to accept your PR's. Yes, I do use some AI on this project, mainly to help catch tokenization/parser bugs (as it is quite annoying for a single person to read a specification over 1000 pages..) and to rewrite some of my code to be more performant/make it more readable as sometimes I tend to write terribly ugly code. My reason for clarifying is I see no difference in explicitly stating I use it just like I state what dependencies are needed for this project. This also makes it easier for people to add this project to their "LLM-ware"/"slopware"/etc. lists if they so choose. This README is also hand written, as it isn't fun to read things people don't want to write themselves. Feel free to use the code in this project for anything, as it is licensed under 0BSD for a reason (and because of my strong distaste for the (A,L)GPL also), and all code not produced by me or an LLM is from various projects I found on Github that are in the public domain.
