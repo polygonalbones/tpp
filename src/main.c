@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <lexer.h>
 #include <tppalloc.h>
 
 char *args_next(int *argc, char ***argv) {
@@ -13,6 +14,8 @@ char *args_next(int *argc, char ***argv) {
   return arg;
 }
 
+// Global compiler state
+static int rc = 0;
 static char **source_files = NULL;
 static size_t source_files_len = 0;
 
@@ -57,10 +60,41 @@ int main(int argc, char **argv) {
   while(argc > 0) {
     char *arg = args_next(&argc, &argv);
     if(*arg == '-') {
+      fprintf(stderr, "tpp: invalid flag '%s'\n", arg);
+      rc = 1;
+      goto tpp_exit;
     }
     else if(!add_source_file(arg)) {
-      return 1;
+      rc = 1;
+      goto tpp_exit;
     }
   }
-  return 0;
+
+  if(source_files_len == 0) {
+    rc = 1;
+    goto tpp_exit;
+  }
+
+  // only call me once
+  if(!lexer_globals_init()) {
+    rc = 1;
+    goto tpp_exit;
+  }
+  for(size_t i = 0; i < source_files_len; i++) {
+    char *source_file = source_files[i];
+
+    Lexer lexer = {0};
+    if(!lexer_from_file(&lexer, source_file)) {
+      rc = 1;
+      goto tpp_exit;
+    }
+
+    lexer_go(&lexer);
+    
+    tpp_free(lexer.source);
+  }
+
+ tpp_exit:
+  if(source_files_len > 0) tpp_free(source_files);
+  return rc;
 }

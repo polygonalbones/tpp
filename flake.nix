@@ -16,14 +16,17 @@
               inherit (pkgs)
                 stdenv
                 mkShell
+                fetchFromGitHub
                 ;
 
               system = stdenv.hostPlatform.system;
             in {
               devShells.${system}.default = mkShell {
                 packages = with pkgs; [
-                  tinycc
+                  # C compilers to test which ones can compile tpp
+                  gcc
                   clang
+                  tinycc
                 ];
               };
             })
