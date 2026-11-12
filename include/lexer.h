@@ -8,18 +8,14 @@
 #include <tppalloc.h>
 
 typedef enum {
+  LEXER_OK = 0,
+} Lexer_Error;
+
+typedef enum {
   TOKEN_UNKNOWN = 0,
   TOKEN_IDENTIFIER,
   TOKEN_KEYWORD,
-  TOKEN_INT_LITERAL,
-  TOKEN_CHAR_LITERAL,
-  TOKEN_FLOAT_LITERAL,
-  TOKEN_STRING_LITERAL,
-  TOKEN_BOOL_LITERAL,
-  TOKEN_PTR_LITERAL,
-  TOKEN_USERDEF_LITERAL,
-  TOKEN_OP,
-  TOKEN_PUNCTUATOR,
+  TOKEN_PP_NUMBER,
   TOKEN_EOF,
 } Token_Kind;
 
@@ -31,11 +27,12 @@ typedef struct {
 
 typedef struct {
   char *source;
+  size_t source_len;
   size_t pos;
 } Lexer;
 
 bool lexer_globals_init();
 bool lexer_from_file(Lexer *lexer, char *path);
-bool lexer_go(Lexer *lexer);
+bool lexer_go(Lexer *lexer, bool dump_tokens);
 
 #endif // LEXER_H_

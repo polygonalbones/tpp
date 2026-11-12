@@ -18,6 +18,7 @@ char *args_next(int *argc, char ***argv) {
 static int rc = 0;
 static char **source_files = NULL;
 static size_t source_files_len = 0;
+static bool dump_tokens = false;
 
 bool add_source_file(char *path) {
   const char *ext = strrchr(path, '.');
@@ -60,9 +61,14 @@ int main(int argc, char **argv) {
   while(argc > 0) {
     char *arg = args_next(&argc, &argv);
     if(*arg == '-') {
-      fprintf(stderr, "tpp: invalid flag '%s'\n", arg);
-      rc = 1;
-      goto tpp_exit;
+      if(strcmp(arg, "-dump-tokens") == 0) {
+        dump_tokens = true;
+      }
+      else {
+        fprintf(stderr, "tpp: invalid flag '%s'\n", arg);
+        rc = 1;
+        goto tpp_exit;
+      }
     }
     else if(!add_source_file(arg)) {
       rc = 1;
@@ -89,7 +95,7 @@ int main(int argc, char **argv) {
       goto tpp_exit;
     }
 
-    lexer_go(&lexer);
+    lexer_go(&lexer, dump_tokens);
     
     tpp_free(lexer.source);
   }

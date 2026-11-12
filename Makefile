@@ -4,9 +4,11 @@ CC = clang
 CFLAGS = -Wall -Wextra -Wswitch -Werror=switch -std=c99 -Iinclude
 
 TARGET = $(BUILD_DIR)/tpp
-SRC = src/main.c src/lexer.c src/hmap.c src/hmap_err.c
-HEADERS = include/tppalloc.h include/lexer.h \
-					include/hmap.h include/hmap_err.h
+SRC = \
+	src/main.c src/lexer.c src/hmap.c src/hmap_err.c
+HEADERS = \
+	include/tppalloc.h include/lexer.h \
+	include/hmap.h include/hmap_err.h
 OBJ = $(addprefix build/, $(notdir $(SRC:.c=.o)))
 
 all: $(TARGET)

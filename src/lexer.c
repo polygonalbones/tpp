@@ -30,6 +30,7 @@ bool lexer_from_file(Lexer *lexer, char *path) {
   }
 
   lexer->source[bytes_read] = '\0';
+  lexer->source_len = bytes_read;
   fclose(fp);
   return true;
 }
@@ -52,11 +53,22 @@ static bool is_whitespace(char ch) {
 }
 
 static bool is_digit(char ch) {
-  return ch >= '0' && ch <= '9';
+  return (ch >= '0' && ch <= '9');
+}
+
+static bool is_nonzero_digit(char ch) {
+  return (ch >= '1' && ch <= '9');
 }
 
 static bool is_nondigit(char ch) {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_';
+}
+
+static bool is_hexadecimal_digit(char ch) {
+  return
+    (ch >= '0' && ch <= '9') ||
+    (ch >= 'a' && ch <= 'f') ||
+    (ch >= 'A' && ch <= 'F');
 }
 
 const char *fmt_token_kind(Token_Kind kind) {
@@ -66,24 +78,8 @@ const char *fmt_token_kind(Token_Kind kind) {
     return "identifier";
   case TOKEN_KEYWORD:
     return "keyword";
-  case TOKEN_INT_LITERAL:
-    return "int_literal";
-  case TOKEN_CHAR_LITERAL:
-    return "char_literal";
-  case TOKEN_FLOAT_LITERAL:
-    return "float_literal";
-  case TOKEN_STRING_LITERAL:
-    return "string_literal";
-  case TOKEN_BOOL_LITERAL:
-    return "bool_literal";
-  case TOKEN_PTR_LITERAL:
-    return "ptr_literal";
-  case TOKEN_USERDEF_LITERAL:
-    return "userdef_literal";
-  case TOKEN_OP:
-    return "operator";
-  case TOKEN_PUNCTUATOR:
-    return "punctuator";
+  case TOKEN_PP_NUMBER:
+    return "pp_number";
   case TOKEN_EOF:
     return "eof";
   case TOKEN_UNKNOWN:
@@ -93,6 +89,7 @@ const char *fmt_token_kind(Token_Kind kind) {
 
 static hmap_t *keywords_map = NULL;
 
+// keywords present in c++11
 #define BASE_KEYWORDS \
   "alignas", "continue", "friend", "register", "true", \
   "alignof", "decltype", "goto", "reinterpret_cast", "try", \
@@ -129,52 +126,100 @@ bool lexer_globals_init() {
   return true;
 }
 
-#define ch lexer->source[lexer->pos]
+const char current_char(Lexer *lexer) {
+  if(lexer->pos >= lexer->source_len)
+    return '\0';
+  return lexer->source[lexer->pos];
+}
 
-Token lexer_next(Lexer *lexer) {
-  while(is_whitespace(ch)) {
-    lexer->pos++;
+const char peek(Lexer *lexer, size_t offset) {
+  size_t p = lexer->pos + offset;
+  if(p >= lexer->source_len)
+    return '\0';
+  return lexer->source[p];
+}
+
+inline void advance(Lexer *lexer, size_t steps) {
+  lexer->pos += ((lexer->pos + steps) >= lexer->source_len
+                 ? lexer->source_len
+                 : steps);
+}
+
+Lexer_Error lexer_next(Lexer *lexer, Token *token) {
+  while(is_whitespace(current_char(lexer))) {
+    advance(lexer, 1);
   }
   
-  Token token = {
+  *token = (Token){
     .kind = TOKEN_UNKNOWN,
     .start = lexer->pos,
     .end = lexer->pos,
   };
 
-  if(ch == '\0') {
-    token.kind = TOKEN_EOF;
-    return token;
+  if(current_char(lexer) == '\0') {
+    token->kind = TOKEN_EOF;
+    return LEXER_OK;
   }
-
-  if(is_nondigit(ch)) {
+  else if(is_nondigit(current_char(lexer))) {
     size_t buf_len = 1;
-    token.kind = TOKEN_IDENTIFIER;
-    lexer->pos++;
-    while(is_nondigit(ch) || is_digit(ch)) {
-      lexer->pos++;
+    token->kind = TOKEN_IDENTIFIER;
+    advance(lexer, 1);
+    while(is_nondigit(current_char(lexer)) || is_digit(current_char(lexer))) {
+      advance(lexer, 1);
       buf_len += 1;
     }
-    token.end = lexer->pos;
+    token->end = lexer->pos;
 
+    // look up token value in keyword set
     char buf[buf_len + 1];
-    memcpy(buf, lexer->source + token.start, buf_len);
+    memcpy(buf, lexer->source + token->start, buf_len);
     buf[buf_len] = '\0';
     if(set_contains(keywords_map, buf))
-      token.kind = TOKEN_KEYWORD;
+      token->kind = TOKEN_KEYWORD;
   }
-  return token;
+  else if(is_digit(current_char(lexer))
+          || (current_char(lexer) == '.' && is_digit(peek(lexer, 1)))) {
+    token->kind = TOKEN_PP_NUMBER;
+
+    advance(lexer, is_digit(current_char(lexer)) ? 1 : 2);
+
+    while(true) {
+      char c = current_char(lexer);
+
+      if((c == 'e' || c == 'E') && (peek(lexer, 1) == '+' || peek(lexer, 1) == '-'))
+        advance(lexer, 2);
+      else if(is_digit(c) || is_nondigit(c) || c == '.')
+        advance(lexer, 1);
+      else if(c == '\\' && (peek(lexer, 1) == 'u' || peek(lexer, 1) == 'U')) {
+        size_t n = (peek(lexer, 1) == 'u') ? 4 : 8;
+        size_t k = 0;
+        while(k < n && is_hexadecimal_digit(peek(lexer, 2 + k)))
+          k++;
+        if(k != n) break;
+        advance(lexer, 2 + n);
+      }
+      else if((unsigned char)c >= 0x80) {
+        advance(lexer, 1);
+      }
+      else
+        break;
+    }
+
+    token->end = lexer->pos;
+  }
+  return LEXER_OK;
 }
 
-#undef ch
-#undef slice
-
-bool lexer_go(Lexer *lexer) {
+bool lexer_go(Lexer *lexer, bool dump_tokens) {
+  Token token = {0};
   while(true) {
-    Token token = lexer_next(lexer);
-    printf("%s '%.*s'\n",
-           fmt_token_kind(token.kind),
-           (int)(token.end - token.start), lexer->source + token.start);
+    Lexer_Error err = lexer_next(lexer, &token);
+    if(dump_tokens)
+      printf("%s '%.*s'\n",
+             fmt_token_kind(token.kind),
+             (int)(token.end - token.start),
+             lexer->source + token.start);
+    
     switch(token.kind) {
     case TOKEN_EOF:
       goto eof_exit_loop;
