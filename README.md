@@ -2,9 +2,9 @@
 tpp (tiny plus-plus) is a tiny compiler designed to compile C++ correctly, as fast as possible. It is inspired by projects like [tcc](https://bellard.org/tcc), [aburi](https://www.github.com/serjective/aburi), etc.
 
 ## Goals and Non-Goals
-tpp is a compiler written for fun and for learning about compilers.
+tpp is written for fun and to help me learn about compilers.
 
-tpp is actively aiming for C++11 as a baseline.
+tpp is aiming for C++11 as a baseline.
 
 tpp is not—and will not be—a production-grade optimizing compiler, and by extension, a GCC/Clang replacement.
 
@@ -16,17 +16,9 @@ Basic usage of tpp is simply invoking `tpp <options> <source_files>`. The compil
 - `-dump-tokens` - This is the equivalent to `-fsyntax-only -Xclang -dump-tokens` in Clang. It is one of the most useful resources for comparing how my lexer fares compared to Clang's.
 
 ## Building
-tpp itself does not have any external dependencies outside of a C compiler (+ libc) and Make. To build it, clone the repository and run `make`.
+tpp itself does not have any external dependencies outside of a C compiler, libc, and Make. To build it, clone the repository and run `make`. This will output a file at `build/tpp`.
 
-This will output the file `build/tpp`.
+For Nix users on a system with flakes enabled, you can run `nix develop` to enter a devshell with the tools you need to build tpp.
 
-For Nix users on systems with flakes enabled, there is a devShell present in the `flake.nix` file that contains `gcc`, `clang`, and `tinycc`, as I think it is important to different C compilers are able to compile tpp (especially tcc as being able to compile tpp and use it to bootstrap GCC/Clang is a goal for the far future).
-
-## Supported systems
-These are systems that the compiler can build and be executed on, and can be cross-compiled to.
-- `x86_64-linux` - This will always have the best support since it is the system I develop the compiler on.
-
-## Contributions
-I am willing to accept contributions to the compiler. I don't feel like writing an AI policy so I simply ask that if you use AI like a tool (aka, you actually read the code and use your brain!) then I am perfectly willing to accept your PR's. Yes, I do use some AI on this project, mainly to help catch tokenization/parser bugs (as it is quite annoying for a single person to read a specification over 1000 pages..) and to rewrite some of my code to be more performant/make it more readable as sometimes I tend to write terribly ugly code. My reason for clarifying is I see no difference in explicitly stating I use it just like I state what dependencies are needed for this project. This also makes it easier for people to add this project to their "LLM-ware"/"slopware"/etc. lists if they so choose. This README is also hand written, as it isn't fun to read things people don't want to write themselves. Feel free to use the code in this project for anything, as it is licensed under 0BSD for a reason (and because of my strong distaste for the (A,L)GPL also), and all code not produced by me or an LLM is from various projects I found on Github that are in the public domain.
-
-Also feel free to open issues if you don't want to write code but still want to contribute. Catching lexer/parser, codegen, C++ conformance, and other bugs is just as helpful!
+## Contributing
+Pull requests are welcome! I'm fine accepting PR's that use AI but you must understand *all* of the code and you are required to hand-write the description since I don't want to read a wall of slop you were too lazy to type yourself. If you don't want to contribute, opening issues is also greatly appreciated.
