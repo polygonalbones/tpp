@@ -16,7 +16,7 @@ Basic usage of tpp is simply invoking `tpp <options> <source_files>`. The compil
 - `-dump-tokens` - This is the equivalent to `-fsyntax-only -Xclang -dump-tokens` in Clang. It is one of the most useful resources for comparing how my lexer fares compared to Clang's.
 
 ## Building
-tpp itself does not have any external dependencies outside of a C compiler, libc, and Make. To build it, clone the repository and run `make`. This will output a file at `build/tpp`.
+tpp itself does not have any external dependencies outside of a C compiler, libc, and GNU Make. To build it, clone the repository and run `make`. This will output a file at `build/tpp`.
 
 For Nix users on a system with flakes enabled, you can run `nix develop` to enter a devshell with the tools you need to build tpp.
 

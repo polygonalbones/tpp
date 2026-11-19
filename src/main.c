@@ -80,12 +80,7 @@ int main(int argc, char **argv) {
     rc = 1;
     goto tpp_exit;
   }
-
-  // only call me once
-  if(!lexer_globals_init()) {
-    rc = 1;
-    goto tpp_exit;
-  }
+  
   for(size_t i = 0; i < source_files_len; i++) {
     char *source_file = source_files[i];
 

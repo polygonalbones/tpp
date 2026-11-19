@@ -1,6 +1,7 @@
-#include <hmap.h>
-#include <hmap_err.h>
 #include <lexer.h>
+
+// auto-generated header, see: tools/tablegen.c
+#include <keywords.h>
 
 bool lexer_from_file(Lexer *lexer, char *path) {
   FILE *fp = fopen(path, "rb");
@@ -33,19 +34,6 @@ bool lexer_from_file(Lexer *lexer, char *path) {
   lexer->source_len = bytes_read;
   fclose(fp);
   return true;
-}
-
-int set_contains(hmap_t *map, const char *key) {
-  void *dummy_val = NULL;
-  err_t *err = hmap_slookup(map, key, &dummy_val);
-  if(err == ERR_OK) return 1;
-
-  if(err->code == HMAP_ERR_NOTFOUND) {
-    err_dispose(err);
-    return 0;
-  }
-
-  return 0;
 }
 
 static inline bool is_whitespace(char ch) {
@@ -85,45 +73,6 @@ const char *fmt_token_kind(Token_Kind kind) {
   case TOKEN_UNKNOWN:
     return "unknown";
   }
-}
-
-static hmap_t *keywords_map = NULL;
-
-// keywords present in c++11
-#define BASE_KEYWORDS \
-  "alignas", "continue", "friend", "register", "true", \
-  "alignof", "decltype", "goto", "reinterpret_cast", "try", \
-  "asm", "default", "if", "return", "typedef" \
-  "auto", "delete", "inline", "short", "typeid", \
-  "bool", "do", "int", "signed", "typename", \
-  "break", "double", "long", "sizeof", "union", \
-  "case", "dynamic_cast", "mutable", "static", "unsigned", \
-  "catch", "else", "namespace", "static_assert", "using", \
-  "char", "enum", "new", "static_cast", "virtual", \
-  "char16_t", "explicit", "noexcept", "struct", "void", \
-  "char32_t", "export", "nullptr", "switch", "volatile", \
-  "class", "extern", "operator", "template", "wchar_t", \
-  "const", "false", "private", "this", "while", \
-  "constexpr", "float", "protected", "thread_local", \
-  "const_cast", "for", "public", "throw"
-
-#define CREATE_KEYWORD_MAP(keywords) do { \
-    const char *const _temp_kw[] = { keywords }; \
-    size_t kw_size = sizeof(_temp_kw) / sizeof(_temp_kw[0]); \
-    hmap_create((&keywords_map), kw_size); \
-    for(size_t i = 0; i < kw_size; i++) { \
-      hmap_swrite((keywords_map), _temp_kw[i], NULL); \
-    } \
-  } while(0)
-
-bool lexer_globals_init() {
-  ERR_F err = ERR_OK;
-  CREATE_KEYWORD_MAP(BASE_KEYWORDS);
-  if(err != ERR_OK) {
-    fprintf(stderr, "failed to create keywords map\n");
-    return false;
-  }
-  return true;
 }
 
 const char current_char(Lexer *lexer) {
@@ -242,7 +191,7 @@ Lexer_Error lexer_next(Lexer *lexer, Token *token) {
       char buf[len + 1];
       memcpy(buf, lexer->source + token->start, len);
       buf[len] = '\0';
-      if(set_contains(keywords_map, buf))
+      if(keywords_contains(buf, len) != KW_INVALID)
         token->kind = TOKEN_KEYWORD;
     }
   }
