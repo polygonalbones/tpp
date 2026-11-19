@@ -48,23 +48,23 @@ int set_contains(hmap_t *map, const char *key) {
   return 0;
 }
 
-static bool is_whitespace(char ch) {
+static inline bool is_whitespace(char ch) {
   return ch == ' ' || ch == '\t' || ch == '\v' || ch == '\n' || ch == '\r' || ch == '\f';
 }
 
-static bool is_digit(char ch) {
+static inline bool is_digit(char ch) {
   return (ch >= '0' && ch <= '9');
 }
 
-static bool is_nonzero_digit(char ch) {
+static inline bool is_nonzero_digit(char ch) {
   return (ch >= '1' && ch <= '9');
 }
 
-static bool is_nondigit(char ch) {
+static inline bool is_nondigit(char ch) {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_';
 }
 
-static bool is_hexadecimal_digit(char ch) {
+static inline bool is_hexadecimal_digit(char ch) {
   return
     (ch >= '0' && ch <= '9') ||
     (ch >= 'a' && ch <= 'f') ||
@@ -145,6 +145,75 @@ inline void advance(Lexer *lexer, size_t steps) {
                  : steps);
 }
 
+static uint32_t hex_value(char ch) {
+  if(ch >= '0' && ch <= '9') return ch - '0';
+  if(ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+  return ch - 'A' + 10;
+}
+
+static size_t scan_ucn(Lexer *lexer, size_t offset, uint32_t *value_out) {
+  if(peek(lexer, offset) != '\\') return 0;
+
+  char kind = peek(lexer, offset + 1);
+  size_t n = (kind == 'u') ? 4 : (kind == 'U') ? 8 : 0;
+  if(n == 0) return 0;
+
+  uint32_t value = 0;
+  for(size_t k = 0; k < n; k++) {
+    char c = peek(lexer, offset + 2 + k);
+    if(!is_hexadecimal_digit(c)) return 0;
+    value = value * 16 + hex_value(c);
+  }
+
+  if(value_out) *value_out = value;
+  return 2 + n;
+}
+
+static bool ucn_value_ok(uint32_t v) {
+  if(v > 0x10FFFF) return false;
+  else if(v >= 0xD800 && v <= 0xDFFF) return false;
+  else if(v < 0xA0 && v != '$' && v != '@' && v != '`') return false;
+  else return true;
+}
+
+static bool ucn_allowed_in_identifier(uint32_t v) {
+  static const struct { uint32_t lo, hi; } ranges[] = {
+    { 0x00A8, 0x00A8 }, { 0x00AA, 0x00AA }, { 0x00AD, 0x00AD }, { 0x00AF, 0x00AF },
+    { 0x00B2, 0x00B5 }, { 0x00B7, 0x00BA }, { 0x00BC, 0x00BE }, { 0x00C0, 0x00D6 },
+    { 0x00D8, 0x00F6 }, { 0x00F8, 0x00FF }, { 0x0100, 0x167F }, { 0x1681, 0x180D },
+    { 0x180F, 0x1FFF }, { 0x200B, 0x200D }, { 0x202A, 0x202E }, { 0x203F, 0x2040 },
+    { 0x2054, 0x2054 }, { 0x2060, 0x206F }, { 0x2070, 0x218F }, { 0x2460, 0x24FF },
+    { 0x2776, 0x2793 }, { 0x2C00, 0x2DFF }, { 0x2E80, 0x2FFF }, { 0x3004, 0x3007 },
+    { 0x3021, 0x302F }, { 0x3031, 0x303F }, { 0x3040, 0xD7FF }, { 0xF900, 0xFD3D },
+    { 0xFD40, 0xFDCF }, { 0xFDF0, 0xFE44 }, { 0xFE47, 0xFFFD },
+    { 0x10000, 0x1FFFD }, { 0x20000, 0x2FFFD }, { 0x30000, 0x3FFFD }, { 0x40000, 0x4FFFD },
+    { 0x50000, 0x5FFFD }, { 0x60000, 0x6FFFD }, { 0x70000, 0x7FFFD }, { 0x80000, 0x8FFFD },
+    { 0x90000, 0x9FFFD }, { 0xA0000, 0xAFFFD }, { 0xB0000, 0xBFFFD }, { 0xC0000, 0xCFFFD },
+    { 0xD0000, 0xDFFFD }, { 0xE0000, 0xEFFFD },
+  };
+  for(size_t i = 0; i < sizeof(ranges)/sizeof(ranges[0]); i++)
+    if(v >= ranges[i].lo && v <= ranges[i].hi) return true;
+  return false;
+}
+
+static bool ucn_disallowed_initially(uint32_t v) {
+  return (v >= 0x0300 && v <= 0x036F) || (v >= 0x1DC0 && v <= 0x1DFF) ||
+         (v >= 0x20D0 && v <= 0x20FF) || (v >= 0xFE20 && v <= 0xFE2F);
+}
+
+static size_t ident_char_len(Lexer *lexer, bool first) {
+  char c = current_char(lexer);
+  if(is_nondigit(c)) return 1;
+  if(!first && is_digit(c)) return 1;
+
+  uint32_t v;
+  size_t n = scan_ucn(lexer, 0, &v);
+  if(n == 0) return 0;
+  if(!ucn_value_ok(v) || !ucn_allowed_in_identifier(v)) return 0;
+  if(first && ucn_disallowed_initially(v)) return 0;
+  return n;
+}
+
 Lexer_Error lexer_next(Lexer *lexer, Token *token) {
   while(is_whitespace(current_char(lexer))) {
     advance(lexer, 1);
@@ -160,47 +229,40 @@ Lexer_Error lexer_next(Lexer *lexer, Token *token) {
     token->kind = TOKEN_EOF;
     return LEXER_OK;
   }
-  else if(is_nondigit(current_char(lexer))) {
-    size_t buf_len = 1;
+  else if(ident_char_len(lexer, true) > 0) {
     token->kind = TOKEN_IDENTIFIER;
-    advance(lexer, 1);
-    while(is_nondigit(current_char(lexer)) || is_digit(current_char(lexer))) {
-      advance(lexer, 1);
-      buf_len += 1;
-    }
+
+    size_t n;
+    while((n = ident_char_len(lexer, false)) > 0)
+      advance(lexer, n);
     token->end = lexer->pos;
 
-    // look up token value in keyword set
-    char buf[buf_len + 1];
-    memcpy(buf, lexer->source + token->start, buf_len);
-    buf[buf_len] = '\0';
-    if(set_contains(keywords_map, buf))
-      token->kind = TOKEN_KEYWORD;
+    size_t len = token->end - token->start;
+    if(memchr(lexer->source + token->start, '\\', len) == NULL) {
+      char buf[len + 1];
+      memcpy(buf, lexer->source + token->start, len);
+      buf[len] = '\0';
+      if(set_contains(keywords_map, buf))
+        token->kind = TOKEN_KEYWORD;
+    }
   }
   else if(is_digit(current_char(lexer))
           || (current_char(lexer) == '.' && is_digit(peek(lexer, 1)))) {
     token->kind = TOKEN_PP_NUMBER;
-
     advance(lexer, is_digit(current_char(lexer)) ? 1 : 2);
-
+    
     while(true) {
       char c = current_char(lexer);
+      size_t n;
 
       if((c == 'e' || c == 'E') && (peek(lexer, 1) == '+' || peek(lexer, 1) == '-'))
         advance(lexer, 2);
-      else if(is_digit(c) || is_nondigit(c) || c == '.')
+      else if(c == '.')
         advance(lexer, 1);
-      else if(c == '\\' && (peek(lexer, 1) == 'u' || peek(lexer, 1) == 'U')) {
-        size_t n = (peek(lexer, 1) == 'u') ? 4 : 8;
-        size_t k = 0;
-        while(k < n && is_hexadecimal_digit(peek(lexer, 2 + k)))
-          k++;
-        if(k != n) break;
-        advance(lexer, 2 + n);
-      }
-      else if((unsigned char)c >= 0x80) {
+      else if((n = ident_char_len(lexer, false)) > 0)
+        advance(lexer, n);
+      else if((unsigned char)c >= 0x80)
         advance(lexer, 1);
-      }
       else
         break;
     }
@@ -214,6 +276,7 @@ bool lexer_go(Lexer *lexer, bool dump_tokens) {
   Token token = {0};
   while(true) {
     Lexer_Error err = lexer_next(lexer, &token);
+    if(err != LEXER_OK) goto eof_exit_loop;
     if(dump_tokens)
       printf("%s '%.*s'\n",
              fmt_token_kind(token.kind),

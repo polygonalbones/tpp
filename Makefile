@@ -16,9 +16,7 @@ all: $(TARGET)
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
 
-vpath %.c src
-
-$(BUILD_DIR)/%.o: %.c $(HEADERS) | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: src/%.c $(HEADERS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
