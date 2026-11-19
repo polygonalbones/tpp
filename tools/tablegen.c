@@ -20,11 +20,10 @@ static void to_enum_name(const char *src, char *dst) {
   strcpy(dst, "TOKEN_");
   size_t j = 3;
   for(size_t i = 0; src[i] != '\0'; i++) {
-    if(isalnum((unsigned char)src[i])) {
+    if(isalnum((unsigned char)src[i]))
       dst[j++] = (char)toupper((unsigned char)src[i]);
-    } else {
+    else
       dst[j++] = '_';
-    }
   }
   dst[j] = '\0';
 }
@@ -83,19 +82,18 @@ int main(int argc, char **argv) {
   fprintf(out, "#include <stddef.h>\n#include <stdint.h>\n#include <string.h>\n#include <murmur3.h>\n");
 
   fprintf(out, "typedef enum {\n    KW_INVALID = -1,\n");
-  for (size_t i = 0; i < count; i++) {
+  for(size_t i = 0; i < count; i++) {
     fprintf(out, "    %s = %zu,\n", enums[i], i);
   }
   fprintf(out, "    KW_COUNT = %zu\n} KeywordEnum;\n\n", count);
 
   fprintf(out, "typedef struct {\n    const char *key;\n    KeywordEnum val;\n} KeywordSlot;\n\n");
   fprintf(out, "static const KeywordSlot KW_TABLE[%zu] = {\n", table_size);
-  for (size_t i = 0; i < table_size; i++) {
-    if (table[i].occupied) {
+  for(size_t i = 0; i < table_size; i++) {
+    if(table[i].occupied)
       fprintf(out, "    [%zu] = { \"%s\", %s },\n", i, table[i].raw, table[i].enum_name);
-    } else {
+    else
       fprintf(out, "    [%zu] = { NULL, KW_INVALID },\n", i);
-    }
   }
   fprintf(out, "};\n\n");
 
