@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  for(size_t i = 0; i < (da_hdr(s->source_files))->nb_elems; i++) {
+  for(size_t i = 0; i < da_nb(s->source_files); i++) {
     printf("file: %s\n", (((struct file **)s->source_files)[i])->name);
   }
 

@@ -31,6 +31,7 @@ typedef struct {
 #define CPPVER_11 201103
 
 #define da_hdr(da) ((struct da_hdr *)(da) - 1)
+#define da_nb(da) ((da_hdr(da))->nb_elems)
 #define da_append(da, elem) do { \
     void *_da = *(da); \
     _da_append(&_da, (elem)); \
