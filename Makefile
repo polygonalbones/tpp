@@ -14,11 +14,13 @@ TARGET = $(BUILD_DIR)/tpp
 SRC = \
 	src/main.c \
 	src/lexer.c \
+	src/preprocessor.c \
 	src/murmur3.c
 
 HEADERS = \
 	include/tppalloc.h \
 	include/lexer.h \
+	include/preprocessor.h \
 	include/murmur3.h
 
 OBJ = $(SRC:src/%.c=$(BUILD_DIR)/%.o)

@@ -36,6 +36,13 @@ bool lexer_from_file(Lexer *lexer, char *path) {
   return true;
 }
 
+// Initialize a lexer from an already-loaded buffer (no copy).
+void lexer_from_buffer(Lexer *lexer, char *data, size_t len) {
+  lexer->source = data;
+  lexer->source_len = len;
+  lexer->pos = 0;
+}
+
 static inline bool is_whitespace(char ch) {
   return ch == ' ' || ch == '\t' || ch == '\v' || ch == '\n' || ch == '\r' || ch == '\f';
 }

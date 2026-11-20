@@ -33,6 +33,7 @@ typedef struct {
 
 bool lexer_globals_init();
 bool lexer_from_file(Lexer *lexer, char *path);
+void lexer_from_buffer(Lexer *lexer, char *data, size_t len);
 bool lexer_go(Lexer *lexer, bool dump_tokens);
 
 #endif // LEXER_H_
