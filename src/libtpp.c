@@ -3,18 +3,29 @@
 
 #include <libtpp.h>
 
-void da_append(da_t *da, void *elem) {
-  struct da_hdr *hdr = da_hdr(*da);
-  size_t nb = hdr ? hdr->nb_elems : 0;
+void _da_append(void **da, void *elem) {
+  struct da_hdr *hdr;
+  size_t nb;
+
+  if(*da) {
+    hdr = da_hdr(*da);
+    nb = hdr->nb_elems;
+  }
+  else {
+    hdr = NULL;
+    nb = 0;
+  }
+
   if((nb & (nb - 1)) == 0) {
     hdr = realloc(hdr, sizeof(*hdr) + (nb ? nb * 2 : 1) * sizeof(void *));
+    hdr->nb_elems = nb;
     *da = hdr + 1;
   }
   ((void **)*da)[nb] = elem;
   hdr->nb_elems = nb + 1;
 }
 
-void da_free(da_t *da, void (*free_cb)(void *)) {
+void _da_free(void **da, void (*free_cb)(void *)) {
   if(!*da) return;
   struct da_hdr *hdr = da_hdr(*da);
   if(free_cb) {

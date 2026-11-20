@@ -3,8 +3,6 @@
 
 #include <stdbool.h>
 
-typedef void * da_t;
-
 struct da_hdr {
   size_t nb_elems;
 };
@@ -25,17 +23,26 @@ typedef struct {
   bool gnu_ext;         /* enable GNU extensions */
   bool tpp_ext;         /* enable TPP extensions */
 
-  da_t source_files;
-  da_t include_paths;
+  char **source_files;
+  char **include_paths;
 } TPP_State;
 
 /* TPP_State->cpp_ver */
 #define CPPVER_11 201103
 
-#define da_hdr(da) ((da) ? (struct da_hdr *)(da) - 1 : NULL)
-#define da_len(da) ((da) ? da_hdr(da)->nb_elems : 0)
-void da_append(da_t *da, void *elem);
-void da_free(da_t *da, void (*free_cb)(void *));
+#define da_hdr(da) ((struct da_hdr *)(da) - 1)
+#define da_append(da, elem) do { \
+    void *_da = *(da); \
+    _da_append(&_da, (elem)); \
+    *(da) = _da; \
+  } while(0)
+#define da_free(da, cb) do { \
+    void *_da = *(da); \
+    _da_free(&_da, (cb)); \
+    *(da) = _da; \
+  } while(0)
+void _da_append(void **da, void *elem);
+void _da_free(void **da, void (*free_cb)(void *));
 
 TPP_State *tpp_new();
 void tpp_add_source_file(TPP_State *s, char *name, int type);
